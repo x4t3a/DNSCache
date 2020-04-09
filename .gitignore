@@ -1,0 +1,5 @@
+3rdparty
+build
+
+# cmake tmp file
+CMakeLists.txt.user
