@@ -1,7 +1,9 @@
 
 cmake_minimum_required(VERSION 3.10)
 
-file(GLOB_RECURSE NET_LIB_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/src/net/*.cpp")
+file(GLOB_RECURSE NET_LIB_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/src/net/*.cpp"
+                               "${CMAKE_CURRENT_SOURCE_DIR}/include/net/*.hpp"
+                               "${CMAKE_CURRENT_SOURCE_DIR}/include/core/*.hpp")
 add_library(net STATIC "${NET_LIB_SRCS}")
 target_include_directories(net PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
