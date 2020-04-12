@@ -101,12 +101,20 @@ public:
         if (not this->allocate_cb)
         { throw std::bad_alloc{}; }
 
-        Node* new_node{ this->allocate_cb() };
+        if (auto new_node{ this->allocate_cb() };
+            nullptr != new_node)
+        {
+            new_node->first  = key;
+            new_node->second = value;
+            
+            if (this->create_cb and
+                (CreateOrUpdateStatus::FATAL_ERROR == this->create_cb(new_node)))
+            { throw std::runtime_error{"Fatal error in the create callback!"}; }
 
-        new_node->first  = key;
-        new_node->second = value;
+            return new_node;
+        }
 
-        return new_node;
+        throw std::bad_alloc{};
     }
 
     auto updateImpl(KeyType const& key, ValueType const& value, Node* node) noexcept(true) -> Node*
@@ -114,10 +122,6 @@ public:
         if (nullptr == node)
         {
             auto new_node{ this->createNode(key, value) };
-
-            if (this->create_cb)
-            { this->create_cb(new_node); }
-
             return new_node;
         }
 
@@ -126,8 +130,9 @@ public:
         {
             case CmpResult::EQ:
             {
-                if (this->update_cb)
-                { this->update_cb(node); }
+                if (this->update_cb and
+                    (CreateOrUpdateStatus::FATAL_ERROR == this->update_cb(node)))
+                { throw std::runtime_error{"Fatal error in the update callback!"}; }
 
                 node->second = value;
             }
@@ -163,9 +168,9 @@ public:
 
                 case CmpResult::EQ:
                 {
-                    // TODO: handle promoting error
-                    if (this->update_cb)
-                    { this->update_cb(node_ptr_it); }
+                    if (this->use_cb and
+                        (CreateOrUpdateStatus::FATAL_ERROR == this->use_cb(node_ptr_it)))
+                    { throw std::runtime_error{"Use callback fatal error!"}; }
 
                     return node_ptr_it->second;
                 }
@@ -190,23 +195,27 @@ public:
     }; // CreateOrUpdateStatus
 
 public:
-    using AllocateCallback       = std::function<Node* ()>;
-    using CreateOrUpdateCallback = std::function<CreateOrUpdateStatus (Node*)>;
+    using AllocateCallback = std::function<Node* ()>;
+    using AccessCallback   = std::function<CreateOrUpdateStatus (Node*)>;
 
     auto setAllocateCallback(AllocateCallback allocate_cb) noexcept(true) -> void
     { this->allocate_cb = std::move(allocate_cb); }
 
-    auto setCreateCallback(CreateOrUpdateCallback create_cb) noexcept(true) -> void
+    auto setCreateCallback(AccessCallback create_cb) noexcept(true) -> void
     { this->create_cb = std::move(create_cb); }
 
-    auto setUpdateCallback(CreateOrUpdateCallback update_cb) noexcept(true) -> void
+    auto setUpdateCallback(AccessCallback update_cb) noexcept(true) -> void
     { this->update_cb = std::move(update_cb); }
 
+    auto setUseCallback(AccessCallback use_cb) noexcept(true) -> void
+    { this->use_cb = std::move(use_cb); }
+
 private: // Fields:
-    Node*                  search_tree_root{};
-    AllocateCallback       allocate_cb{};
-    CreateOrUpdateCallback create_cb{};
-    CreateOrUpdateCallback update_cb{};
+    Node*            search_tree_root{};
+    AllocateCallback allocate_cb{};
+    AccessCallback   create_cb{};
+    AccessCallback   update_cb{};
+    AccessCallback   use_cb{};
 
 }; // FlatLLRBMap
 

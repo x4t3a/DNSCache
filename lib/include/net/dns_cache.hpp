@@ -5,6 +5,7 @@
 #include "net/types.hpp"
 
 #include <memory>
+#include <mutex>
 #include <string>
 
 namespace net
@@ -14,7 +15,8 @@ class DNSCache : public ::util::Singleton<DNSCache>
 {
 private:
     class DNSCacheImpl;
-    std::unique_ptr<DNSCacheImpl> impl; //{nullptr};
+    std::unique_ptr<DNSCacheImpl> impl{nullptr};
+    std::mutex                    mutex;
 
 protected:
     using SingletonBase = typename ::util::Singleton<DNSCache>;

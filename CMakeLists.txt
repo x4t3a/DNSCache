@@ -7,10 +7,10 @@ option(BUILD_UT "Build unit-tests" OFF)
 add_subdirectory(lib)
 
 if(BUILD_EXAMPLES)
-	add_subdirectory(examples)
+    add_subdirectory(examples)
 endif()
 
 if(BUILD_UT)
-	add_subdirectory(tests)
+    add_subdirectory(tests)
 endif()
 

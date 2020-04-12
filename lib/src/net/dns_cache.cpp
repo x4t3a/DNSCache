@@ -76,7 +76,7 @@ public:
             } // lambda
         );
 
-        dictionary.setUpdateCallback(
+        auto use_or_update_cb{
             [this] (Node* updated_node) -> DNSDictionary::CreateOrUpdateStatus
             {
                 if (nullptr == updated_node)
@@ -88,7 +88,10 @@ public:
 
                 return DNSDictionary::CreateOrUpdateStatus::SUCCESS;
             } // lambda
-        );
+        };
+
+        dictionary.setUpdateCallback(use_or_update_cb);
+        dictionary.setUseCallback(use_or_update_cb);
     }
 
     [[nodiscard]]
@@ -129,7 +132,9 @@ auto DNSCache::update(FQDN const& fqdn, IP const& ip) noexcept(true) -> void
 {
     if (nullptr != impl)
     {
-        impl->update(fqdn, ip);
+        std::scoped_lock lck{this->mutex};
+        if (nullptr != impl)
+        { impl->update(fqdn, ip); }
     }
 }
 
@@ -137,7 +142,9 @@ auto DNSCache::resolve(FQDN const& fqdn) noexcept(true) -> IP
 {
     if (nullptr != impl)
     {
-        return impl->resolve(fqdn);
+        std::scoped_lock lck{this->mutex};
+        if (nullptr != impl)
+        { return impl->resolve(fqdn); }
     }
     
     return {};
