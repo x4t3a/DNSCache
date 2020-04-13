@@ -128,7 +128,7 @@ DNSCache::DNSCache(core::Capacity capacity)
     : impl{std::make_unique<DNSCacheImpl>(capacity)}
 {}
 
-auto DNSCache::update(FQDN const& fqdn, IP const& ip) noexcept(true) -> void
+auto DNSCache::update(FQDN const& fqdn, IP const& ip) noexcept(false) -> void
 {
     if (nullptr != impl)
     {

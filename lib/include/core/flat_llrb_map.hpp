@@ -117,7 +117,7 @@ public:
         throw std::bad_alloc{};
     }
 
-    auto updateImpl(KeyType const& key, ValueType const& value, Node* node) noexcept(true) -> Node*
+    auto updateImpl(KeyType const& key, ValueType const& value, Node* node) noexcept(false) -> Node*
     {
         if (nullptr == node)
         {

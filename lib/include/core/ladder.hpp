@@ -73,7 +73,7 @@ public: // Methods:
             return free_node;
         }
 
-        throw std::runtime_error{"Bad ladder bottom!"};
+        throw std::runtime_error{ "Bad ladder bottom!" };
     }
 
     [[nodiscard]]

@@ -35,7 +35,7 @@ public:
 
     ~DNSCache() noexcept(true); // = default
 
-    auto update(FQDN const& fqdn, IP const& ip) noexcept(true) -> void;
+    auto update(FQDN const& fqdn, IP const& ip) noexcept(false) -> void;
 
     [[nodiscard]]
     auto resolve(FQDN const& fqdn) noexcept(true) -> IP;
