@@ -1,6 +1,5 @@
 #pragma once
 
-#include "core/singleton.hpp"
 #include "core/types.hpp"
 #include "net/types.hpp"
 
@@ -11,29 +10,29 @@
 namespace net
 {
 
-class DNSCache : public ::util::Singleton<DNSCache>
+class DNSCache
 {
 private:
     class DNSCacheImpl;
-    std::unique_ptr<DNSCacheImpl> impl{nullptr};
+
+private:
     std::mutex                    mutex;
-
-protected:
-    using SingletonBase = typename ::util::Singleton<DNSCache>;
-    friend SingletonBase;
-
-    explicit DNSCache(core::Capacity capacity = 0);
+    std::unique_ptr<DNSCacheImpl> impl;
 
 public:
 
+    explicit DNSCache(core::Capacity capacity = 0);
+
+    ~DNSCache() noexcept(true); // = default
+
+    static auto minViableCapacity() noexcept(true) -> core::Capacity; // unfortunately can't be constexpr
+    auto size() const noexcept(true) -> core::Size;
     auto maxSize() noexcept(true) -> core::Capacity;
 
     DNSCache& operator = (DNSCache const&) = delete;
     DNSCache& operator = (DNSCache&&)      = delete;
     DNSCache(DNSCache const&)              = delete;
     DNSCache(DNSCache&&)                   = delete;
-
-    ~DNSCache() noexcept(true); // = default
 
     auto update(FQDN const& fqdn, IP const& ip) noexcept(false) -> void;
 

@@ -3,7 +3,7 @@
 #include <utility>
 #include <optional>
 
-namespace util
+namespace core
 {
 
 ///
@@ -41,4 +41,4 @@ private:
 
 }; // Singleton
 
-} // util
+} // core

@@ -31,7 +31,7 @@ auto IPV4RawToStr(IPV4Raw raw_ip) noexcept(true) -> IPV4StrResult
     std::array<char, INET_ADDRSTRLEN> ip_buffer{};
 
     if (::inet_ntop(AF_INET, &raw_ip, ip_buffer.data(), INET_ADDRSTRLEN))
-    { return IPV4StrResult{ip_buffer.data()}; }
+    { return IPV4StrResult{ ip_buffer.data() }; }
     
     return std::nullopt;
 }

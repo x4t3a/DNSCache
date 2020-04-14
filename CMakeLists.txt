@@ -1,6 +1,8 @@
 
 cmake_minimum_required(VERSION 3.10)
 
+project("DNSCache")
+
 option(BUILD_EXAMPLES "Build examples" OFF)
 option(BUILD_UT "Build unit-tests" OFF)
 

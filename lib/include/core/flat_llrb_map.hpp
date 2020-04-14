@@ -1,5 +1,7 @@
 #pragma once
 
+#include "core/types.hpp"
+
 #include <functional>
 
 namespace core
@@ -58,6 +60,16 @@ public: // Types:
     }; // NodeTrait
 
 public:
+    FlatLLRBMap(core::Capacity const capacity) noexcept(true)
+        : capacity{ capacity }
+    {}
+
+    auto size() const noexcept(true) -> core::Size
+    { return this->nodes_number; };
+
+    auto maxSize() const noexcept(true) -> core::Size
+    { return this->nodes_number; };
+
     enum class CmpResult : std::uint8_t
     { EQ, LT, GT };
 
@@ -111,76 +123,75 @@ public:
                 (CreateOrUpdateStatus::FATAL_ERROR == this->create_cb(new_node)))
             { throw std::runtime_error{"Fatal error in the create callback!"}; }
 
+            ++this->nodes_number;
             return new_node;
         }
 
         throw std::bad_alloc{};
     }
 
-    auto updateImpl(KeyType const& key, ValueType const& value, Node* node) noexcept(false) -> Node*
+    using ExistingOrCandidateType = std::pair<Node**, bool>;
+
+    auto findExistingOrCandidate(KeyType const& key) noexcept(true) -> ExistingOrCandidateType
     {
-        if (nullptr == node)
+        auto node_ptr_it{ &(this->search_tree_root) };
+        auto existing{ false };
+
+        while ((nullptr != *node_ptr_it) and (not existing))
         {
-            auto new_node{ this->createNode(key, value) };
-            return new_node;
-        }
-
-        auto cmp_result = cmp(key, node->first);
-        switch (cmp_result)
-        {
-            case CmpResult::EQ:
-            {
-                if (this->update_cb and
-                    (CreateOrUpdateStatus::FATAL_ERROR == this->update_cb(node)))
-                { throw std::runtime_error{"Fatal error in the update callback!"}; }
-
-                node->second = value;
-            }
-            break;
-
-            case CmpResult::LT:
-            { node->left = updateImpl(key, value, node->left); }
-            break;
-
-            case CmpResult::GT:
-            { node->right = updateImpl(key, value, node->right); }
-            break;
-        }
-
-        return node;
-    }
-
-    void insertOrUpdate(KeyType const& key, ValueType const& value)
-    {
-        this->search_tree_root = this->updateImpl(key, value, this->search_tree_root);
-    }
-
-    ValueType& at(KeyType const& key) noexcept(false)
-    {
-        auto node_ptr_it{ this->search_tree_root };
-        while (nullptr != node_ptr_it)
-        {
-            switch (cmp(key, *node_ptr_it))
+            switch (cmp(key, **node_ptr_it))
             {
                 case CmpResult::LT:
-                { node_ptr_it = node_ptr_it->left; }
+                { node_ptr_it = &((**node_ptr_it).left); }
                 break;
 
                 case CmpResult::EQ:
-                {
-                    if (this->use_cb and
-                        (CreateOrUpdateStatus::FATAL_ERROR == this->use_cb(node_ptr_it)))
-                    { throw std::runtime_error{"Use callback fatal error!"}; }
-
-                    return node_ptr_it->second;
-                }
+                { existing = true; }
                 break;
 
                 case CmpResult::GT:
-                { node_ptr_it = node_ptr_it->right; }
+                { node_ptr_it = &((**node_ptr_it).right); }
                 break;
             }
         }
+
+        return ExistingOrCandidateType{ node_ptr_it, existing };
+    }
+
+    auto insertOrUpdate(KeyType const& key, ValueType const& value) -> void
+    {
+        auto existing_or_candidate{ this->findExistingOrCandidate(key) };
+        if (true == existing_or_candidate.second)
+        {
+            if ((nullptr != existing_or_candidate.first) and
+                (nullptr != *existing_or_candidate.first))
+            {
+                auto node{ *existing_or_candidate.first };
+                node->second = value;
+                if (this->update_cb)
+                { this->update_cb(node); }
+            }
+            else
+            { throw std::runtime_error{ "Bad element!" }; }
+        }
+        else
+        {
+            if (this->size() == this->maxSize())
+            {
+                // TODO remove
+            }
+
+            if (nullptr != existing_or_candidate.first)
+            { *existing_or_candidate.first = this->createNode(key, value); }
+        }
+    }
+
+    auto at(KeyType const& key) noexcept(false) -> ValueType&
+    {
+        auto existing_or_candidate{ this->findExistingOrCandidate(key) };
+        if (auto ptr{ existing_or_candidate.first };
+            (true == existing_or_candidate.second) and (nullptr != ptr) and (nullptr != *ptr))
+        { return (**ptr).second; }
 
         throw std::out_of_range{""};
     }
@@ -211,11 +222,13 @@ public:
     { this->use_cb = std::move(use_cb); }
 
 private: // Fields:
-    Node*            search_tree_root{};
-    AllocateCallback allocate_cb{};
-    AccessCallback   create_cb{};
-    AccessCallback   update_cb{};
-    AccessCallback   use_cb{};
+    Node*                search_tree_root{};
+    core::Size           nodes_number{};
+    core::Capacity const capacity{};
+    AllocateCallback     allocate_cb{};
+    AccessCallback       create_cb{};
+    AccessCallback       update_cb{};
+    AccessCallback       use_cb{};
 
 }; // FlatLLRBMap
 

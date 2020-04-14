@@ -2,6 +2,8 @@
 
 #include "core/types.hpp"
 
+#include <stdexcept>
+
 namespace core
 {
 
@@ -19,6 +21,7 @@ public: // Types:
 
     struct ToTop {};
     struct OneUp {};
+    struct ToBottom {};
 
     enum class PromotingStatus : std::uint8_t
     {
@@ -27,9 +30,17 @@ public: // Types:
         ERROR,
     };
 
+    enum class DemotingStatus : std::uint8_t
+    {
+        SUCCESS,
+        NON_DEMOTABLE, // Already at the bottom
+        ERROR
+    };
+
 public: // Constants:
     inline static constexpr ToTop TO_TOP{};
     inline static constexpr OneUp ONE_UP{};
+    inline static constexpr core::Capacity MINIMAL_VIABLE_CAPACITY{ 3 };
 
 private: // Fields:
     Capacity const capacity{};
@@ -40,21 +51,22 @@ public: // RAII:
     Ladder(Node* storage, Capacity capacity) noexcept(false)
         : capacity{ capacity }
         , ladder_bottom{ storage }
-        , ladder_top{ storage + capacity }
+        , ladder_top{ storage + (capacity - 1) }
     {
-        constexpr auto MINIMAL_VIABLE_SIZE{ 3 };
-        if ((nullptr == this->ladder_bottom) or (MINIMAL_VIABLE_SIZE > this->capacity))
+        if ((nullptr == this->ladder_bottom) or (MINIMAL_VIABLE_CAPACITY > this->capacity))
         { throw std::logic_error("BadArgs"); }
 
-        auto second{ std::next(this->ladder_bottom) };
-        this->ladder_bottom->next_ladder_item = second;
+        this->ladder_bottom->next_ladder_item = this->ladder_bottom + 1;
 
-        auto const last_to_modify{ std::prev(this->ladder_top) };
-        for (auto it_ptr{ second }; it_ptr < last_to_modify; ++it_ptr)
+        auto const last_to_modify{ this->ladder_top - 1 };
+        for (auto it_ptr{ this->ladder_bottom->next_ladder_item }; it_ptr <= last_to_modify; ++it_ptr)
         {
-            it_ptr->next_ladder_item = std::next(it_ptr);
-            it_ptr->prev_ladder_item = std::prev(it_ptr);
+            it_ptr->next_ladder_item = it_ptr + 1;
+            it_ptr->prev_ladder_item = it_ptr - 1;
         }
+
+        this->ladder_top->prev_ladder_item = this->ladder_top - 1;
+        this->ladder_top->next_ladder_item = nullptr;
     }
 
 public: // Methods:
@@ -63,17 +75,29 @@ public: // Methods:
     { return this->capacity; }
 
     [[nodiscard]]
-    auto getFreeNode() noexcept(false) -> Node*
+    auto releaseBottom() noexcept(false) -> Node*
     {
         if (nullptr != this->ladder_bottom)
         {
-            auto free_node              = this->ladder_bottom;
-            this->ladder_bottom         = free_node->next_ladder_item;
-            free_node->next_ladder_item = nullptr;
+            auto free_node                        = this->ladder_bottom;
+            this->ladder_bottom                   = free_node->next_ladder_item;
+
+            if ((nullptr != this->ladder_bottom) and
+                (nullptr != this->ladder_bottom->prev_ladder_item))
+            { this->ladder_bottom->prev_ladder_item = nullptr; }
+
+            free_node->next_ladder_item           = nullptr;
+            free_node->prev_ladder_item           = nullptr;
             return free_node;
         }
 
         throw std::runtime_error{ "Bad ladder bottom!" };
+    }
+
+    auto demote(Node* demotee, ToBottom const&) noexcept(true) -> DemotingStatus
+    {
+        if (nullptr == demotee)
+        return DemotingStatus::SUCCESS;
     }
 
     [[nodiscard]]
@@ -84,7 +108,7 @@ public: // Methods:
 
         if (promotee == this->ladder_top)
         { return PromotingStatus::NON_PROMOTABLE; }
-        
+
         promotee->next_ladder_item = this->ladder_top->next_ladder_item;
         promotee->prev_ladder_item = this->ladder_top;
 
